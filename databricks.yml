@@ -10,8 +10,8 @@ include:
 
 variables:
   catalog:
-    description: Unity Catalog for VA Claims AI demo (fedhealth demo workspace)
-    default: fedhealth_demo_ws_catalog
+    description: Unity Catalog for VA Claims AI demo (bdr_labs workspace)
+    default: bdr_labs
   schema:
     description: Schema for medallion tables and app-facing gold
     default: vba_claims_agent
@@ -24,12 +24,12 @@ targets:
     mode: development
     default: true
     variables:
-      catalog: fedhealth_demo_ws_catalog
+      catalog: bdr_labs
       schema: vba_claims_agent
   prod:
     mode: production
     variables:
-      catalog: fedhealth_demo_ws_catalog
+      catalog: bdr_labs
       schema: vba_claims_agent
 
 sync:

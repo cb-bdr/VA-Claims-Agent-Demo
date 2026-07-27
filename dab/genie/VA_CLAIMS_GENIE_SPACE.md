@@ -6,7 +6,7 @@ Genie configuration is **workspace-specific** and may not be fully expressible i
 
 Attach Unity Catalog tables (defaults):
 
-- `{catalog}.{schema}.claims` (e.g. `fedhealth_demo_ws_catalog.vba_claims_agent.claims`)
+- `{catalog}.{schema}.claims` (e.g. `bdr_labs.vba_claims_agent.claims`)
 - `{catalog}.{schema}.gold_claims_timeseries`
 - Optional: `silver_va_doc_chunk`, `silver_dim_icd10`, `silver_observation_loinc`
 

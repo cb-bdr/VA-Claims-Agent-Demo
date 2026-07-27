@@ -18,7 +18,9 @@ class ClaimsService:
             token=os.getenv("DATABRICKS_TOKEN")
         )
         self._warehouse_id = None
-        catalog = os.getenv("DATABRICKS_UC_CATALOG", "fedhealth_demo_ws_catalog")
+        catalog = os.getenv("DATABRICKS_UC_CATALOG")
+        if not catalog:
+            raise Exception("DATABRICKS_UC_CATALOG environment variable not set")
         schema_name = os.getenv("DATABRICKS_UC_SCHEMA", "vba_claims_agent")
         self.schema = f"{catalog}.{schema_name}"
     

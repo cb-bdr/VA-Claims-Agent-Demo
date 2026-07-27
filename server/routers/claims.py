@@ -540,10 +540,9 @@ async def evaluate_claim_with_agent(request: AgentEvaluationRequest):
     databricks_token = os.getenv('DATABRICKS_TOKEN')
     if not databricks_token:
         raise HTTPException(status_code=500, detail="DATABRICKS_TOKEN environment variable not set")
-    endpoint_url = os.getenv(
-        "DATABRICKS_SERVING_ENDPOINT_URL",
-        "https://e2-demo-field-eng.cloud.databricks.com/serving-endpoints/vba_claims_agent/invocations",
-    )
+    endpoint_url = os.getenv("DATABRICKS_SERVING_ENDPOINT_URL")
+    if not endpoint_url:
+        raise HTTPException(status_code=500, detail="DATABRICKS_SERVING_ENDPOINT_URL environment variable not set")
     
     async def stream_response():
         try:

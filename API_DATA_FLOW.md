@@ -15,7 +15,7 @@ Frontend (React)
     ↓
 Backend (FastAPI)
     ↓
-    SQL Query to: fedhealth_demo_ws_catalog.vba_claims_agent.gold_adjudication_reports
+    SQL Query to: bdr_labs.vba_claims_agent.gold_adjudication_reports
     ↓
     Returns data OR falls back to mock data if table doesn't exist
     ↓
@@ -28,7 +28,7 @@ The backend resolves tables as `{catalog}.{schema}`. Defaults match the **VA Cla
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DATABRICKS_UC_CATALOG` | `fedhealth_demo_ws_catalog` | Unity Catalog name |
+| `DATABRICKS_UC_CATALOG` | `bdr_labs` | Unity Catalog name |
 | `DATABRICKS_UC_SCHEMA` | `vba_claims_agent` | Schema within the catalog |
 
 Set these in `.env.local` if your workspace uses different names.
@@ -89,7 +89,7 @@ The frontend transforms API data to match UI requirements:
 
 ## Backend Data Source
 
-**Primary Table**: `fedhealth_demo_ws_catalog.vba_claims_agent.gold_adjudication_reports`
+**Primary Table**: `bdr_labs.vba_claims_agent.gold_adjudication_reports`
 
 **SQL Query** (from `claims_service.py`):
 ```sql
@@ -102,7 +102,7 @@ SELECT
     priority_level,
     fraud_score,
     compliance_score
-FROM fedhealth_demo_ws_catalog.vba_claims_agent.gold_adjudication_reports
+FROM bdr_labs.vba_claims_agent.gold_adjudication_reports
 WHERE current_status IN ('PENDING', 'DECISION_READY', 'REVIEW_REQUIRED', 'AWAITING_EVIDENCE')
 ORDER BY 
     CASE priority_level 
@@ -135,7 +135,7 @@ LIMIT 50
 
 ### 1. Check if table exists in Databricks:
 ```sql
-SELECT * FROM fedhealth_demo_ws_catalog.vba_claims_agent.gold_adjudication_reports LIMIT 5;
+SELECT * FROM bdr_labs.vba_claims_agent.gold_adjudication_reports LIMIT 5;
 ```
 
 ### 2. Check backend API response:
@@ -159,7 +159,7 @@ If returns **> 3** → Using real data from table
 For real data to work, `gold_adjudication_reports` needs these columns:
 
 ```sql
-CREATE TABLE fedhealth_demo_ws_catalog.vba_claims_agent.gold_adjudication_reports (
+CREATE TABLE bdr_labs.vba_claims_agent.gold_adjudication_reports (
     claim_id STRING,
     veteran_id STRING,
     veteran_name STRING,

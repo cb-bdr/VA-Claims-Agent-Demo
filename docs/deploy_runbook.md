@@ -13,7 +13,7 @@ Copy [.env.example](../.env.example) to `.env.local` and set at least:
 
 - `DATABRICKS_HOST`, `DATABRICKS_TOKEN`
 - `DATABRICKS_APP_NAME`, `DBA_SOURCE_CODE_PATH`
-- `DATABRICKS_UC_CATALOG`, `DATABRICKS_UC_SCHEMA` (defaults: `fedhealth_demo_ws_catalog`, `vba_claims_agent`)
+- `DATABRICKS_UC_CATALOG`, `DATABRICKS_UC_SCHEMA` (defaults: `bdr_labs`, `vba_claims_agent`)
 
 Optional:
 
@@ -59,11 +59,11 @@ This syncs bundle files and creates/updates **SDP** `va_claims_medallion_dev` (n
 
 ### First-time catalog
 
-If `fedhealth_demo_ws_catalog` does not exist, create it in Unity Catalog (SQL or UI), then run the pipeline:
+If `bdr_labs` does not exist, create it in Unity Catalog (SQL or UI), then run the pipeline:
 
 ```sql
-CREATE CATALOG IF NOT EXISTS fedhealth_demo_ws_catalog;
-CREATE SCHEMA IF NOT EXISTS fedhealth_demo_ws_catalog.vba_claims_agent;
+CREATE CATALOG IF NOT EXISTS bdr_labs;
+CREATE SCHEMA IF NOT EXISTS bdr_labs.vba_claims_agent;
 ```
 
 Grants: give the SDP’s service principal **USE CATALOG**, **USE SCHEMA**, **CREATE TABLE**, **SELECT**, **MODIFY** as required.
@@ -75,8 +75,8 @@ In **Databricks UI**: open **Workflows** / **Data Engineering**, select the `va_
 After success, verify:
 
 ```sql
-SELECT COUNT(*) FROM fedhealth_demo_ws_catalog.vba_claims_agent.claims;
-SELECT COUNT(*) FROM fedhealth_demo_ws_catalog.vba_claims_agent.gold_claims_timeseries;
+SELECT COUNT(*) FROM bdr_labs.vba_claims_agent.claims;
+SELECT COUNT(*) FROM bdr_labs.vba_claims_agent.gold_claims_timeseries;
 ```
 
 ## 3. Configure Genie (optional)
