@@ -1,0 +1,80 @@
+{
+  "version": 2,
+  "config": {
+    "sample_questions": [
+      { "id": "125e8ceefab846b7b39e996ac67f56d3", "question": ["Which claims have the lowest average evidence completeness_score?"] },
+      { "id": "256db2a542144a92904cacc644282875", "question": ["Which weeks had the most PACT-eligible claims?"] },
+      { "id": "64fe8548881148e599321e13ee53b428", "question": ["What topic_tags exist in the VA policy document chunks?"] },
+      { "id": "88c5bab990f447f39b00501f17f23b9e", "question": ["List the claimed conditions with the highest average fraud_score."] },
+      { "id": "ad9e5cd1795849c7b77e96eb9b95a3a3", "question": ["How many claims are in each current_status?"] }
+    ]
+  },
+  "data_sources": {
+    "tables": [
+      { "identifier": "bdr_labs.vba_claims_agent.claim_evidence" },
+      { "identifier": "bdr_labs.vba_claims_agent.claim_history" },
+      { "identifier": "bdr_labs.vba_claims_agent.claims" },
+      { "identifier": "bdr_labs.vba_claims_agent.gold_claims_timeseries" },
+      { "identifier": "bdr_labs.vba_claims_agent.silver_va_doc_chunk" }
+    ]
+  },
+  "instructions": {
+    "text_instructions": [
+      {
+        "id": "6d3c531ef4424ef9bd8c2d9c4a4abdf1",
+        "content": [
+          "You assist VA claims analysts reviewing synthetic demo data. This is synthetic FEOYCS demonstration data — no real veteran information. Ground every answer in the attached tables only.\n",
+          "\n",
+          "Schema facts (verified against the live warehouse — trust these over any assumption):\n",
+          "* current_status on `claims` has exactly five values: PENDING, DECISION_READY, REVIEW_REQUIRED, AWAITING_EVIDENCE, APPROVED. There is no ACTIVE, DENIED, or DELAYED value — never filter or group assuming those exist.\n",
+          "* Prefer `current_status` over `status` on `claims` — they hold identical values today, but `current_status` is the standard column.\n",
+          "* `is_pact_act_eligible` and `presumptive_match` are BOOLEAN columns. Filter with the bare column or `= true`/`= false` — never `= 1`/`= 0`.\n",
+          "* `claim_evidence` and `claim_history` are 1:many children of `claims`, joined on `claim_id` (exactly 4 evidence rows and 3 history rows per claim, no orphans).\n",
+          "* `gold_adjudication_reports` is a documented literal alias of `claims` (identical column set, same pipeline) — it is not attached to this space, but if a question references it, treat it as `claims`, not a separate report shape.\n",
+          "* All data is a static snapshot spanning 2024-01-01 to 2024-11-23 — not a live feed. Never filter relative to today's date; anchor recency windows to `MAX(date_submitted)` in `claims` instead.\n",
+          "* `silver_va_doc_chunk` holds VA policy-document excerpts for citations, not veteran records.\n",
+          "* `fraud_score` and `compliance_score` are synthetic risk signals for this demo, not real fraud determinations.\n",
+          "\n",
+          "Rules:\n",
+          "* Do not invent veteran PHI or real individuals — this is synthetic FEOYCS demonstration data, no real veteran information.\n",
+          "* If asked for policy interpretation, summarize patterns from `silver_va_doc_chunk` only; do not speculate beyond it.\n",
+          "* Prefer SQL over speculation; cite table and column names when explaining logic."
+        ]
+      }
+    ],
+    "example_question_sqls": [
+      {
+        "id": "3f097177da154712878e7035d9dcdbaf",
+        "question": ["Which claimed conditions have the highest average fraud score?"],
+        "sql": [
+          "SELECT `claimed_condition`, AVG(`fraud_score`) AS `avg_fraud_score`\n",
+          "FROM `bdr_labs`.`vba_claims_agent`.`claims`\n",
+          "GROUP BY `claimed_condition`\n",
+          "ORDER BY `avg_fraud_score` DESC\n",
+          "LIMIT 5;"
+        ]
+      },
+      {
+        "id": "7f279d6b9e534c4483738a2abb558364",
+        "question": ["Which claims have the lowest average evidence completeness?"],
+        "sql": [
+          "SELECT `claim_id`, AVG(`completeness_score`) AS `avg_completeness`\n",
+          "FROM `bdr_labs`.`vba_claims_agent`.`claim_evidence`\n",
+          "GROUP BY `claim_id`\n",
+          "ORDER BY `avg_completeness` ASC\n",
+          "LIMIT 10;"
+        ]
+      },
+      {
+        "id": "9c599f92f85042148c29b1c945ceca1a",
+        "question": ["How many claims are in each status?"],
+        "sql": [
+          "SELECT `current_status`, COUNT(*) AS `claim_count`\n",
+          "FROM `bdr_labs`.`vba_claims_agent`.`claims`\n",
+          "GROUP BY `current_status`\n",
+          "ORDER BY `claim_count` DESC;"
+        ]
+      }
+    ]
+  }
+}
