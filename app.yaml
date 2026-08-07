@@ -2,3 +2,12 @@ command: [
   "uvicorn",
   "server.app:app"
 ]
+env:
+  - name: "DATABRICKS_UC_CATALOG"
+    value: "bdr_labs"
+  - name: "DATABRICKS_UC_SCHEMA"
+    value: "vba_claims_agent"
+  - name: "DATABRICKS_GENIE_SPACE_ID"
+    value: "01f1901389231e9381ed2dffb7166d6c"
+  - name: "DATABRICKS_SQL_WAREHOUSE_ID"
+    value: "f55e003d2e50b597"
