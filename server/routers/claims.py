@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 from pydantic import BaseModel
 from server.services.claims_service import ClaimsService
 from server.services import genie_conversation_client as genie_conv
+from databricks.sdk import WorkspaceClient
 import httpx
 import os
 import json
@@ -20,12 +21,14 @@ class ClaimMetrics(BaseModel):
     activeClaims: int
     processingRate: float
     veteranImpact: int
+    isFallback: bool = False
 
 
 class CriticalClaim(BaseModel):
     name: str
     affected: int
     days: int
+    isFallback: bool = False
 
 
 class VisibilityGap(BaseModel):
@@ -34,12 +37,14 @@ class VisibilityGap(BaseModel):
     region: str
     delay: float
     risk: int
+    isFallback: bool = False
 
 
 class RegionDelay(BaseModel):
     name: str
     normal: float
     delayed: float
+    isFallback: bool = False
 
 
 class DashboardData(BaseModel):
@@ -107,6 +112,7 @@ class AdjudicatorStats(BaseModel):
     pendingClaimsPercent: float
     avgDecisionTimeDays: int
     presumptiveMatchRate: float
+    isFallback: bool = False
 
 
 class PendingClaim(BaseModel):
@@ -119,6 +125,7 @@ class PendingClaim(BaseModel):
     fraudScore: float
     complianceScore: float
     isPactAct: Optional[bool] = True
+    isFallback: bool = False
 
 
 class HighPriorityClaim(BaseModel):
@@ -131,11 +138,13 @@ class HighPriorityClaim(BaseModel):
     fraudReason: Optional[str]
     complianceUpdate: Optional[str]
     aiSummary: str
+    isFallback: bool = False
 
 
 class PactActStats(BaseModel):
     totalEligible: int
     exposureTypes: List[Dict[str, Any]]
+    isFallback: bool = False
 
 
 class AdjudicationDashboardData(BaseModel):
@@ -174,6 +183,7 @@ class ClaimDetail(BaseModel):
     evidence: ClaimDetailEvidence
     presumptiveMatchRate: Optional[float] = 74.0
     history: List[ClaimHistoryItem]
+    isFallback: bool = False
 
 
 class ClaimActionRequest(BaseModel):
@@ -245,12 +255,16 @@ async def get_adjudication_timeseries() -> List[TimeseriesRow]:
 @router.get("/genie/verify", response_model=GenieVerifyResponse)
 async def verify_genie_space(url: str = Query(..., min_length=16, max_length=2048)) -> GenieVerifyResponse:
     """
-    Best-effort check that a Genie space URL is reachable on the configured workspace
-    using the app's Databricks PAT (same auth as SQL). Used before embedding Genie in an iframe.
+    Best-effort check that a Genie space URL is reachable on the configured workspace,
+    authenticated via the SDK's unified auth (CLI profile, OAuth U2M, or the app service
+    principal when deployed) rather than a raw PAT. Used before embedding Genie in an iframe.
     """
-    token = os.getenv("DATABRICKS_TOKEN")
-    if not token:
-        return GenieVerifyResponse(ok=False, detail="DATABRICKS_TOKEN not configured on app")
+    try:
+        workspace_client = WorkspaceClient()
+        headers = workspace_client.config.authenticate()
+        cfg_host = urlparse(workspace_client.config.host or "").hostname
+    except Exception as e:
+        return GenieVerifyResponse(ok=False, detail=f"Databricks auth not configured on app: {e}")
 
     parsed = urlparse(url)
     if parsed.scheme != "https":
@@ -262,14 +276,12 @@ async def verify_genie_space(url: str = Query(..., min_length=16, max_length=204
             detail="Genie URL host must be a Databricks cloud domain",
         )
 
-    cfg_host = urlparse(os.getenv("DATABRICKS_HOST", "")).hostname
     if cfg_host and host != cfg_host.lower():
         raise HTTPException(
             status_code=400,
             detail=f"Genie URL host must match DATABRICKS_HOST ({cfg_host})",
         )
 
-    headers = {"Authorization": f"Bearer {token}"}
     try:
         async with httpx.AsyncClient() as client:
             head = await client.head(url, headers=headers, follow_redirects=True, timeout=25.0)
@@ -294,8 +306,9 @@ def _genie_ask_impl(body: GenieAskRequest) -> GenieAskResponse:
         raise HTTPException(
             status_code=503,
             detail=(
-                "Genie conversation API not configured. Set DATABRICKS_HOST, DATABRICKS_TOKEN, "
-                "and DATABRICKS_GENIE_SPACE_ID (or DATABRICKS_GENIE_SPACE_URL with /genie/spaces/{id})."
+                "Genie conversation API not configured. Set DATABRICKS_GENIE_SPACE_ID "
+                "(or DATABRICKS_GENIE_SPACE_URL with /genie/rooms/{id}), and ensure Databricks "
+                "auth resolves (CLI profile, OAuth U2M, or the app service principal)."
             ),
         )
     content = (body.content or "").strip()
@@ -537,13 +550,14 @@ async def evaluate_claim_with_agent(request: AgentEvaluationRequest):
     """
     Proxy endpoint to call Databricks VBA Claims Agent with streaming
     """
-    databricks_token = os.getenv('DATABRICKS_TOKEN')
-    if not databricks_token:
-        raise HTTPException(status_code=500, detail="DATABRICKS_TOKEN environment variable not set")
     endpoint_url = os.getenv("DATABRICKS_SERVING_ENDPOINT_URL")
     if not endpoint_url:
         raise HTTPException(status_code=500, detail="DATABRICKS_SERVING_ENDPOINT_URL environment variable not set")
-    
+    try:
+        auth_headers = WorkspaceClient().config.authenticate()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Databricks auth not configured on app: {e}")
+
     async def stream_response():
         try:
             async with httpx.AsyncClient(timeout=120.0) as client:
@@ -558,14 +572,14 @@ async def evaluate_claim_with_agent(request: AgentEvaluationRequest):
                     "max_output_tokens": 4000,
                     "stream": True
                 }
-                
+
                 async with client.stream(
                     'POST',
                     endpoint_url,
                     json=payload,
                     headers={
                         'Content-Type': 'application/json',
-                        'Authorization': f'Bearer {databricks_token}'
+                        **auth_headers,
                     }
                 ) as response:
                     response.raise_for_status()
