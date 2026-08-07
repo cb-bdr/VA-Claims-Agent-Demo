@@ -1,0 +1,15 @@
+# One-shot synthetic data load for bdr_labs.va_claims_tc (GATED corpus).
+# Not an incremental pipeline -- plain notebook run, serverless compute.
+resources:
+  jobs:
+    gated_synthetic_load:
+      name: gated_synthetic_load_${bundle.target}
+      tasks:
+        - task_key: load
+          notebook_task:
+            notebook_path: ../../va_claims_tc_synthetic_generator/databricks/notebooks/gen_synthetic_data.py
+            base_parameters:
+              seed: "20260908"
+              veterans: "500"
+              claims: "600"
+              schema: "bdr_labs.va_claims_tc"
